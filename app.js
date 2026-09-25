@@ -11,9 +11,7 @@ const STORAGE_KEY = "personal_todo_tasks_v1";
 const THEME_KEY = "personal_todo_theme_v1";
 
 let tasks = loadTasks();
-
 let currentView = "today";
-
 let editingTaskId = null;
 
 
@@ -103,9 +101,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
   updateDate();
 
+  updatePageInformation();
+
   render();
 
   setupEvents();
+
+  setupMobileNavigation();
+
+  setupVoiceInput();
 
 });
 
@@ -116,51 +120,93 @@ document.addEventListener("DOMContentLoaded", () => {
 
 function setupEvents() {
 
-  /* Add task buttons */
+  /* Add task */
 
-  document
-    .getElementById("openTaskModal")
-    .addEventListener("click", () => {
-      openModal();
-    });
+  const openTaskModal =
+    document.getElementById("openTaskModal");
+
+  if (openTaskModal) {
+
+    openTaskModal.addEventListener(
+      "click",
+      () => {
+        openModal();
+      }
+    );
+
+  }
 
 
-  document
-    .getElementById("emptyAddButton")
-    .addEventListener("click", () => {
-      openModal();
-    });
+  /* Empty state add button */
+
+  const emptyAddButton =
+    document.getElementById("emptyAddButton");
+
+  if (emptyAddButton) {
+
+    emptyAddButton.addEventListener(
+      "click",
+      () => {
+        openModal();
+      }
+    );
+
+  }
 
 
   /* Close modal */
 
-  document
-    .getElementById("closeTaskModal")
-    .addEventListener("click", closeModal);
+  const closeTaskModal =
+    document.getElementById("closeTaskModal");
+
+  if (closeTaskModal) {
+
+    closeTaskModal.addEventListener(
+      "click",
+      closeModal
+    );
+
+  }
 
 
-  document
-    .getElementById("cancelTask")
-    .addEventListener("click", closeModal);
+  const cancelTask =
+    document.getElementById("cancelTask");
+
+  if (cancelTask) {
+
+    cancelTask.addEventListener(
+      "click",
+      closeModal
+    );
+
+  }
 
 
-  /* Submit */
+  /* Submit form */
 
-  taskForm.addEventListener(
-    "submit",
-    handleTaskSubmit
-  );
+  if (taskForm) {
+
+    taskForm.addEventListener(
+      "submit",
+      handleTaskSubmit
+    );
+
+  }
 
 
   /* Search */
 
-  searchInput.addEventListener(
-    "input",
-    render
-  );
+  if (searchInput) {
+
+    searchInput.addEventListener(
+      "input",
+      render
+    );
+
+  }
 
 
-  /* Navigation */
+  /* Desktop navigation */
 
   document
     .querySelectorAll(".nav-item[data-view]")
@@ -173,13 +219,23 @@ function setupEvents() {
           currentView =
             button.dataset.view;
 
+
           document
             .querySelectorAll(".nav-item[data-view]")
             .forEach(item => {
               item.classList.remove("active");
             });
 
+
+          document
+            .querySelectorAll(".mobile-nav-item[data-view]")
+            .forEach(item => {
+              item.classList.remove("active");
+            });
+
+
           button.classList.add("active");
+
 
           updatePageInformation();
 
@@ -191,57 +247,81 @@ function setupEvents() {
     });
 
 
-  /* Theme */
+  /* Desktop theme */
 
-  document
-    .getElementById("themeToggle")
-    .addEventListener(
+  const themeToggle =
+    document.getElementById("themeToggle");
+
+  if (themeToggle) {
+
+    themeToggle.addEventListener(
       "click",
       toggleTheme
     );
 
+  }
 
-  /* Mobile menu */
 
-  document
-    .getElementById("mobileMenu")
-    .addEventListener(
+  /* Close modal by clicking overlay */
+
+  if (taskModal) {
+
+    taskModal.addEventListener(
       "click",
-      showMobileNavigation
+      event => {
+
+        if (
+          event.target === taskModal
+        ) {
+
+          closeModal();
+
+        }
+
+      }
     );
 
-
-  /* Close modal by clicking background */
-
-  taskModal.addEventListener(
-    "click",
-    event => {
-
-      if (
-        event.target === taskModal
-      ) {
-        closeModal();
-      }
-
-    }
-  );
+  }
 
 
-  /* Escape */
+  /* Keyboard */
 
   document.addEventListener(
     "keydown",
     event => {
 
+      /* Escape */
+
       if (
-        event.key === "Escape" &&
-        taskModal.classList.contains("open")
+        event.key === "Escape"
       ) {
-        closeModal();
+
+        if (
+          taskModal &&
+          taskModal.classList.contains("open")
+        ) {
+
+          closeModal();
+
+        }
+
+
+        const mobileNav =
+          document.getElementById("mobileNav");
+
+        if (
+          mobileNav &&
+          mobileNav.classList.contains("open")
+        ) {
+
+          closeMobileNavigation();
+
+        }
+
       }
 
 
-      /* Command/Ctrl + K */
+      /* Ctrl + K / Command + K */
 
       if (
         (event.metaKey || event.ctrlKey) &&
@@ -250,12 +330,280 @@ function setupEvents() {
 
         event.preventDefault();
 
-        searchInput.focus();
+        if (searchInput) {
+          searchInput.focus();
+        }
 
       }
 
     }
   );
+
+}
+
+
+/* =====================================================
+   MOBILE NAVIGATION
+   ===================================================== */
+
+function setupMobileNavigation() {
+
+  const mobileMenu =
+    document.getElementById("mobileMenu");
+
+  const mobileNav =
+    document.getElementById("mobileNav");
+
+
+  /* If mobile elements don't exist, stop */
+
+  if (!mobileMenu || !mobileNav) {
+
+    console.warn(
+      "Mobile navigation elements not found."
+    );
+
+    return;
+
+  }
+
+
+  /* Three-dot button */
+
+  mobileMenu.addEventListener(
+    "click",
+    event => {
+
+      event.preventDefault();
+
+      event.stopPropagation();
+
+      toggleMobileNavigation();
+
+    }
+  );
+
+
+  /* Mobile view buttons */
+
+  mobileNav
+    .querySelectorAll(
+      ".mobile-nav-item[data-view]"
+    )
+    .forEach(button => {
+
+      button.addEventListener(
+        "click",
+        event => {
+
+          event.preventDefault();
+
+          event.stopPropagation();
+
+
+          currentView =
+            button.dataset.view;
+
+
+          /* Desktop active state */
+
+          document
+            .querySelectorAll(
+              ".nav-item[data-view]"
+            )
+            .forEach(item => {
+
+              item.classList.remove(
+                "active"
+              );
+
+            });
+
+
+          /* Mobile active state */
+
+          document
+            .querySelectorAll(
+              ".mobile-nav-item[data-view]"
+            )
+            .forEach(item => {
+
+              item.classList.remove(
+                "active"
+              );
+
+            });
+
+
+          button.classList.add(
+            "active"
+          );
+
+
+          updatePageInformation();
+
+          render();
+
+          closeMobileNavigation();
+
+        }
+      );
+
+    });
+
+
+  /* Mobile appearance button */
+
+  const mobileThemeToggle =
+    document.getElementById(
+      "mobileThemeToggle"
+    );
+
+
+  if (mobileThemeToggle) {
+
+    mobileThemeToggle.addEventListener(
+      "click",
+      event => {
+
+        event.preventDefault();
+
+        event.stopPropagation();
+
+        toggleTheme();
+
+      }
+    );
+
+  }
+
+
+  /* Close when clicking outside */
+
+  document.addEventListener(
+    "click",
+    event => {
+
+      if (
+        !mobileNav.classList.contains("open")
+      ) {
+
+        return;
+
+      }
+
+
+      if (
+        mobileNav.contains(event.target) ||
+        mobileMenu.contains(event.target)
+      ) {
+
+        return;
+
+      }
+
+
+      closeMobileNavigation();
+
+    }
+  );
+
+}
+
+
+/* =====================================================
+   MOBILE MENU HELPERS
+   ===================================================== */
+
+function toggleMobileNavigation() {
+
+  const mobileNav =
+    document.getElementById("mobileNav");
+
+  const mobileMenu =
+    document.getElementById("mobileMenu");
+
+
+  if (!mobileNav) {
+    return;
+  }
+
+
+  const isOpen =
+    mobileNav.classList.toggle("open");
+
+
+  if (mobileMenu) {
+
+    mobileMenu.setAttribute(
+      "aria-expanded",
+      isOpen
+        ? "true"
+        : "false"
+    );
+
+  }
+
+}
+
+
+function showMobileNavigation() {
+
+  const mobileNav =
+    document.getElementById("mobileNav");
+
+  const mobileMenu =
+    document.getElementById("mobileMenu");
+
+
+  if (!mobileNav) {
+    return;
+  }
+
+
+  mobileNav.classList.add(
+    "open"
+  );
+
+
+  if (mobileMenu) {
+
+    mobileMenu.setAttribute(
+      "aria-expanded",
+      "true"
+    );
+
+  }
+
+}
+
+
+function closeMobileNavigation() {
+
+  const mobileNav =
+    document.getElementById("mobileNav");
+
+  const mobileMenu =
+    document.getElementById("mobileMenu");
+
+
+  if (mobileNav) {
+
+    mobileNav.classList.remove(
+      "open"
+    );
+
+  }
+
+
+  if (mobileMenu) {
+
+    mobileMenu.setAttribute(
+      "aria-expanded",
+      "false"
+    );
+
+  }
 
 }
 
@@ -267,7 +615,9 @@ function setupEvents() {
 function openModal(task = null) {
 
   editingTaskId =
-    task ? task.id : null;
+    task
+      ? task.id
+      : null;
 
 
   if (task) {
@@ -308,7 +658,10 @@ function openModal(task = null) {
   }
 
 
-  taskModal.classList.add("open");
+  taskModal.classList.add(
+    "open"
+  );
+
 
   taskModal.setAttribute(
     "aria-hidden",
@@ -316,23 +669,34 @@ function openModal(task = null) {
   );
 
 
-  setTimeout(() => {
-    taskTitle.focus();
-  }, 100);
+  setTimeout(
+    () => {
+
+      taskTitle.focus();
+
+    },
+    100
+  );
 
 }
 
 
 function closeModal() {
 
-  taskModal.classList.remove("open");
+  taskModal.classList.remove(
+    "open"
+  );
+
 
   taskModal.setAttribute(
     "aria-hidden",
     "true"
   );
 
-  editingTaskId = null;
+
+  editingTaskId =
+    null;
+
 
   taskForm.reset();
 
@@ -378,6 +742,8 @@ function handleTaskSubmit(event) {
   };
 
 
+  /* Editing */
+
   if (editingTaskId) {
 
     const task =
@@ -404,13 +770,19 @@ function handleTaskSubmit(event) {
       task.updatedAt =
         new Date().toISOString();
 
+
       showToast(
         "Task updated"
       );
 
     }
 
-  } else {
+  }
+
+
+  /* Creating */
+
+  else {
 
     tasks.unshift({
 
@@ -470,7 +842,9 @@ function toggleTask(id) {
     );
 
 
-  if (!task) return;
+  if (!task) {
+    return;
+  }
 
 
   task.completed =
@@ -504,7 +878,9 @@ function editTask(id) {
     );
 
 
-  if (!task) return;
+  if (!task) {
+    return;
+  }
 
 
   openModal(task);
@@ -521,7 +897,9 @@ function deleteTask(id) {
     );
 
 
-  if (!task) return;
+  if (!task) {
+    return;
+  }
 
 
   const confirmed =
@@ -530,7 +908,9 @@ function deleteTask(id) {
     );
 
 
-  if (!confirmed) return;
+  if (!confirmed) {
+    return;
+  }
 
 
   tasks =
@@ -565,40 +945,49 @@ function render() {
 
 
   const search =
-    searchInput.value
-      .trim()
-      .toLowerCase();
+    searchInput
+      ? searchInput.value
+          .trim()
+          .toLowerCase()
+      : "";
 
 
   if (search) {
 
     visibleTasks =
-      visibleTasks.filter(task => {
+      visibleTasks.filter(
+        task => {
 
-        const text = [
+          const text = [
 
-          task.title,
+            task.title,
 
-          task.notes,
+            task.notes,
 
-          task.priority
+            task.priority
 
-        ]
-          .join(" ")
-          .toLowerCase();
+          ]
+            .join(" ")
+            .toLowerCase();
 
 
-        return text.includes(search);
+          return text.includes(
+            search
+          );
 
-      });
+        }
+      );
 
   }
 
 
-  taskList.innerHTML = "";
+  taskList.innerHTML =
+    "";
 
 
-  if (visibleTasks.length === 0) {
+  if (
+    visibleTasks.length === 0
+  ) {
 
     taskList.style.display =
       "none";
@@ -643,22 +1032,30 @@ function render() {
 function createTaskElement(task) {
 
   const element =
-    document.createElement("article");
+    document.createElement(
+      "article"
+    );
 
 
   element.className =
     "task" +
-    (task.completed
-      ? " completed"
-      : "");
+    (
+      task.completed
+        ? " completed"
+        : ""
+    );
 
 
   const priorityLabel =
-    capitalize(task.priority);
+    capitalize(
+      task.priority
+    );
 
 
   const dateLabel =
-    formatTaskDate(task.date);
+    formatTaskDate(
+      task.date
+    );
 
 
   element.innerHTML = `
@@ -672,6 +1069,7 @@ function createTaskElement(task) {
       }"
       data-action="toggle"
       data-id="${task.id}"
+      type="button"
     >
       <span>✓</span>
     </button>
@@ -735,6 +1133,7 @@ function createTaskElement(task) {
         aria-label="Edit task"
         data-action="edit"
         data-id="${task.id}"
+        type="button"
       >
         ✎
       </button>
@@ -746,6 +1145,7 @@ function createTaskElement(task) {
         aria-label="Delete task"
         data-action="delete"
         data-id="${task.id}"
+        type="button"
       >
         ×
       </button>
@@ -756,7 +1156,9 @@ function createTaskElement(task) {
 
 
   element
-    .querySelectorAll("[data-action]")
+    .querySelectorAll(
+      "[data-action]"
+    )
     .forEach(button => {
 
       button.addEventListener(
@@ -769,25 +1171,32 @@ function createTaskElement(task) {
           const action =
             button.dataset.action;
 
+
           const id =
             button.dataset.id;
 
 
-          if (action === "toggle") {
+          if (
+            action === "toggle"
+          ) {
 
             toggleTask(id);
 
           }
 
 
-          if (action === "edit") {
+          if (
+            action === "edit"
+          ) {
 
             editTask(id);
 
           }
 
 
-          if (action === "delete") {
+          if (
+            action === "delete"
+          ) {
 
             deleteTask(id);
 
@@ -814,7 +1223,9 @@ function getTasksForCurrentView() {
     getTodayString();
 
 
-  if (currentView === "today") {
+  if (
+    currentView === "today"
+  ) {
 
     return tasks.filter(
       task =>
@@ -825,22 +1236,29 @@ function getTasksForCurrentView() {
   }
 
 
-  if (currentView === "upcoming") {
+  if (
+    currentView === "upcoming"
+  ) {
 
-    return tasks.filter(
-      task =>
-        task.date > today &&
-        !task.completed
-    )
+    return tasks
+      .filter(
+        task =>
+          task.date > today &&
+          !task.completed
+      )
       .sort(
-        (a,b) =>
-          a.date.localeCompare(b.date)
+        (a, b) =>
+          a.date.localeCompare(
+            b.date
+          )
       );
 
   }
 
 
-  if (currentView === "completed") {
+  if (
+    currentView === "completed"
+  ) {
 
     return tasks.filter(
       task =>
@@ -888,16 +1306,28 @@ function updateCounts() {
     );
 
 
-  todayCount.textContent =
-    todayTasks.length;
+  if (todayCount) {
+
+    todayCount.textContent =
+      todayTasks.length;
+
+  }
 
 
-  upcomingCount.textContent =
-    upcomingTasks.length;
+  if (upcomingCount) {
+
+    upcomingCount.textContent =
+      upcomingTasks.length;
+
+  }
 
 
-  completedCount.textContent =
-    completedTasks.length;
+  if (completedCount) {
+
+    completedCount.textContent =
+      completedTasks.length;
+
+  }
 
 }
 
@@ -908,7 +1338,9 @@ function updateCounts() {
 
 function updatePageInformation() {
 
-  if (currentView === "today") {
+  if (
+    currentView === "today"
+  ) {
 
     pageEyebrow.textContent =
       "MY DAY";
@@ -924,7 +1356,9 @@ function updatePageInformation() {
   }
 
 
-  if (currentView === "upcoming") {
+  if (
+    currentView === "upcoming"
+  ) {
 
     pageEyebrow.textContent =
       "PLANNING";
@@ -940,7 +1374,9 @@ function updatePageInformation() {
   }
 
 
-  if (currentView === "completed") {
+  if (
+    currentView === "completed"
+  ) {
 
     pageEyebrow.textContent =
       "DONE";
@@ -962,7 +1398,14 @@ function updatePageInformation() {
 
 function updateEmptyState() {
 
+  const addButton =
+    emptyState.querySelector(
+      ".empty-add-button"
+    );
+
+
   if (
+    searchInput &&
     searchInput.value.trim()
   ) {
 
@@ -972,23 +1415,30 @@ function updateEmptyState() {
     emptyText.textContent =
       "Try another search term.";
 
-    emptyState
-      .querySelector(".empty-add-button")
-      .style.display =
-      "none";
+
+    if (addButton) {
+
+      addButton.style.display =
+        "none";
+
+    }
 
     return;
 
   }
 
 
-  emptyState
-    .querySelector(".empty-add-button")
-    .style.display =
-    "inline-flex";
+  if (addButton) {
+
+    addButton.style.display =
+      "inline-flex";
+
+  }
 
 
-  if (currentView === "today") {
+  if (
+    currentView === "today"
+  ) {
 
     emptyTitle.textContent =
       "Your day is clear";
@@ -999,7 +1449,9 @@ function updateEmptyState() {
   }
 
 
-  if (currentView === "upcoming") {
+  if (
+    currentView === "upcoming"
+  ) {
 
     emptyTitle.textContent =
       "Nothing planned yet";
@@ -1010,7 +1462,9 @@ function updateEmptyState() {
   }
 
 
-  if (currentView === "completed") {
+  if (
+    currentView === "completed"
+  ) {
 
     emptyTitle.textContent =
       "Nothing completed yet";
@@ -1032,18 +1486,27 @@ function getTodayString() {
   const date =
     new Date();
 
+
   const year =
     date.getFullYear();
+
 
   const month =
     String(
       date.getMonth() + 1
-    ).padStart(2, "0");
+    ).padStart(
+      2,
+      "0"
+    );
+
 
   const day =
     String(
       date.getDate()
-    ).padStart(2, "0");
+    ).padStart(
+      2,
+      "0"
+    );
 
 
   return `${year}-${month}-${day}`;
@@ -1053,13 +1516,22 @@ function getTodayString() {
 
 function setTodayAsDefaultDate() {
 
-  taskDate.value =
-    getTodayString();
+  if (taskDate) {
+
+    taskDate.value =
+      getTodayString();
+
+  }
 
 }
 
 
 function updateDate() {
+
+  if (!pageDate) {
+    return;
+  }
+
 
   const date =
     new Date();
@@ -1089,13 +1561,18 @@ function formatTaskDate(dateString) {
     getTodayString();
 
 
-  if (dateString === today) {
+  if (
+    dateString === today
+  ) {
+
     return "Today";
+
   }
 
 
   const tomorrow =
     new Date();
+
 
   tomorrow.setDate(
     tomorrow.getDate() + 1
@@ -1111,13 +1588,16 @@ function formatTaskDate(dateString) {
   if (
     dateString === tomorrowString
   ) {
+
     return "Tomorrow";
+
   }
 
 
   const date =
     new Date(
-      dateString + "T00:00:00"
+      dateString +
+      "T00:00:00"
     );
 
 
@@ -1137,15 +1617,23 @@ function formatDateForInput(date) {
   const year =
     date.getFullYear();
 
+
   const month =
     String(
       date.getMonth() + 1
-    ).padStart(2, "0");
+    ).padStart(
+      2,
+      "0"
+    );
+
 
   const day =
     String(
       date.getDate()
-    ).padStart(2, "0");
+    ).padStart(
+      2,
+      "0"
+    );
 
 
   return `${year}-${month}-${day}`;
@@ -1178,7 +1666,9 @@ function loadTasks() {
 
 
     if (!saved) {
+
       return [];
+
     }
 
 
@@ -1196,6 +1686,7 @@ function loadTasks() {
       "Could not load tasks:",
       error
     );
+
 
     return [];
 
@@ -1223,11 +1714,22 @@ function toggleTheme() {
 
   localStorage.setItem(
     THEME_KEY,
-    dark ? "dark" : "light"
+    dark
+      ? "dark"
+      : "light"
   );
 
 
   updateThemeIcon();
+
+  updateMobileThemeIcon();
+
+
+  showToast(
+    dark
+      ? "Dark mode"
+      : "Light mode"
+  );
 
 }
 
@@ -1240,7 +1742,9 @@ function loadTheme() {
     );
 
 
-  if (theme === "dark") {
+  if (
+    theme === "dark"
+  ) {
 
     document.body.classList.add(
       "dark"
@@ -1250,6 +1754,8 @@ function loadTheme() {
 
 
   updateThemeIcon();
+
+  updateMobileThemeIcon();
 
 }
 
@@ -1262,6 +1768,11 @@ function updateThemeIcon() {
     );
 
 
+  if (!icon) {
+    return;
+  }
+
+
   const dark =
     document.body.classList.contains(
       "dark"
@@ -1269,60 +1780,36 @@ function updateThemeIcon() {
 
 
   icon.textContent =
-    dark ? "☀" : "☾";
+    dark
+      ? "☀"
+      : "☾";
 
 }
 
 
-/* ====================================================
-   MOBILE NAVIGATION
-   ===================================================== */
+function updateMobileThemeIcon() {
 
-   
-document
-  .querySelectorAll(".mobile-nav-item[data-view]")
-  .forEach(button => {
+  const icon =
+    document.getElementById(
+      "mobileThemeIcon"
+    );
 
-    button.addEventListener("click", () => {
 
-      currentView = button.dataset.view;
-
-      document
-        .querySelectorAll(".nav-item[data-view]")
-        .forEach(item => {
-          item.classList.remove("active");
-        });
-
-      document
-        .querySelectorAll(".mobile-nav-item[data-view]")
-        .forEach(item => {
-          item.classList.remove("active");
-        });
-
-      button.classList.add("active");
-
-      updatePageInformation();
-
-      render();
-
-      const mobileNav =
-        document.getElementById("mobileNav");
-
-      mobileNav.classList.remove("open");
-
-    });
-
-  });
-function showMobileNavigation() {
-
-  const mobileNav =
-    document.getElementById("mobileNav");
-
-  if (!mobileNav) {
+  if (!icon) {
     return;
   }
 
-  mobileNav.classList.toggle("open");
+
+  const dark =
+    document.body.classList.contains(
+      "dark"
+    );
+
+
+  icon.textContent =
+    dark
+      ? "☀"
+      : "☾";
 
 }
 
@@ -1335,6 +1822,11 @@ let toastTimer;
 
 
 function showToast(message) {
+
+  if (!toast || !toastMessage) {
+    return;
+  }
+
 
   toastMessage.textContent =
     message;
@@ -1351,13 +1843,16 @@ function showToast(message) {
 
 
   toastTimer =
-    setTimeout(() => {
+    setTimeout(
+      () => {
 
-      toast.classList.remove(
-        "show"
-      );
+        toast.classList.remove(
+          "show"
+        );
 
-    }, 2200);
+      },
+      2200
+    );
 
 }
 
@@ -1408,160 +1903,238 @@ function escapeHtml(value) {
   return div.innerHTML;
 
 }
-if ("serviceWorker" in navigator) {
-  window.addEventListener("load", () => {
-    navigator.serviceWorker.register("./sw.js")
-      .then(() => {
-        console.log("Todo PWA ready");
-      })
-      .catch(error => {
-        console.error(
-          "Service worker registration failed:",
-          error
-        );
-      });
-  });
-}
+
+
 /* =====================================================
    VOICE TASK INPUT
    ===================================================== */
 
-const voiceTaskButton = document.getElementById("voiceTaskButton");
+const voiceTaskButton =
+  document.getElementById(
+    "voiceTaskButton"
+  );
+
 
 let recognition = null;
 let isListening = false;
 
+
 function setupVoiceInput() {
+
+  if (!voiceTaskButton) {
+    return;
+  }
+
 
   const SpeechRecognition =
     window.SpeechRecognition ||
     window.webkitSpeechRecognition;
 
+
   if (!SpeechRecognition) {
+
     return;
+
   }
 
-  recognition = new SpeechRecognition();
 
-  recognition.lang = "en-US";
-  recognition.continuous = false;
-  recognition.interimResults = false;
+  recognition =
+    new SpeechRecognition();
 
-  recognition.onstart = () => {
 
-    isListening = true;
+  recognition.lang =
+    "en-US";
 
-    voiceTaskButton.classList.add("listening");
 
-    showToast("Listening...");
+  recognition.continuous =
+    false;
 
-  };
 
-  recognition.onresult = (event) => {
+  recognition.interimResults =
+    false;
 
-    const transcript =
-      event.results[0][0].transcript.trim();
 
-    if (!transcript) {
-      showToast("I didn't hear anything.");
-      return;
+  recognition.onstart =
+    () => {
+
+      isListening =
+        true;
+
+
+      voiceTaskButton.classList.add(
+        "listening"
+      );
+
+
+      showToast(
+        "Listening..."
+      );
+
+    };
+
+
+  recognition.onresult =
+    event => {
+
+      const transcript =
+        event.results[0][0]
+          .transcript
+          .trim();
+
+
+      if (!transcript) {
+
+        showToast(
+          "I didn't hear anything."
+        );
+
+        return;
+
+      }
+
+
+      openModal();
+
+
+      taskTitle.value =
+        transcript;
+
+
+      taskTitle.focus();
+
+
+      showToast(
+        "Task captured"
+      );
+
+    };
+
+
+  recognition.onerror =
+    event => {
+
+      console.error(
+        "Voice error:",
+        event.error
+      );
+
+
+      if (
+        event.error ===
+        "not-allowed"
+      ) {
+
+        showToast(
+          "Please allow microphone access."
+        );
+
+      }
+
+      else if (
+        event.error ===
+        "no-speech"
+      ) {
+
+        showToast(
+          "I didn't hear anything. Try again."
+        );
+
+      }
+
+      else {
+
+        showToast(
+          "Voice input failed. Try again."
+        );
+
+      }
+
+    };
+
+
+  recognition.onend =
+    () => {
+
+      isListening =
+        false;
+
+
+      voiceTaskButton.classList.remove(
+        "listening"
+      );
+
+    };
+
+
+  voiceTaskButton.addEventListener(
+    "click",
+    () => {
+
+      if (!recognition) {
+
+        showToast(
+          "Voice input is not supported in this browser."
+        );
+
+        return;
+
+      }
+
+
+      if (isListening) {
+
+        recognition.stop();
+
+        return;
+
+      }
+
+
+      recognition.start();
+
     }
-
-    // Open the normal Add Task window
-    openModal();
-
-    // Put the spoken words into the task title
-    taskTitle.value = transcript;
-
-    taskTitle.focus();
-
-    showToast("Task captured");
-
-  };
-
-  recognition.onerror = (event) => {
-
-    console.error(
-      "Voice error:",
-      event.error
-    );
-
-    if (event.error === "not-allowed") {
-
-      showToast(
-        "Please allow microphone access."
-      );
-
-    } else if (event.error === "no-speech") {
-
-      showToast(
-        "I didn't hear anything. Try again."
-      );
-
-    } else {
-
-      showToast(
-        "Voice input failed. Try again."
-      );
-
-    }
-
-  };
-
-  recognition.onend = () => {
-
-    isListening = false;
-
-    voiceTaskButton.classList.remove(
-      "listening"
-    );
-
-  };
+  );
 
 }
 
 
-voiceTaskButton.addEventListener(
-  "click",
-  () => {
+/* =====================================================
+   SERVICE WORKER
+   ===================================================== */
 
-    if (!recognition) {
+if (
+  "serviceWorker" in navigator
+) {
 
-      showToast(
-        "Voice input is not supported in this browser."
-      );
+  window.addEventListener(
+    "load",
+    () => {
 
-      return;
-    }
+      navigator.serviceWorker
+        .register(
+          "./service-worker.js"
+        )
+        .then(
+          () => {
 
-    if (isListening) {
+            console.log(
+              "Todo PWA service worker registered."
+            );
 
-      recognition.stop();
+          }
+        )
+        .catch(
+          error => {
 
-      return;
-    }
+            console.error(
+              "Service worker registration failed:",
+              error
+            );
 
-    recognition.start();
-
-  }
-);
-
-
-setupVoiceInput();
-
-// Register the PWA service worker
-if ("serviceWorker" in navigator) {
-  window.addEventListener("load", () => {
-    navigator.serviceWorker
-      .register("./service-worker.js")
-      .then(() => {
-        console.log("Todo PWA service worker registered.");
-      })
-      .catch(error => {
-        console.error(
-          "Service worker registration failed:",
-          error
+          }
         );
-      });
-  });
+
+    }
+  );
+
 }
